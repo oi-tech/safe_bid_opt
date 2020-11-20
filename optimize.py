@@ -575,9 +575,6 @@ def safe_optimize_rev(scl):
     rev_mix = np.full((len(scl), N_COST, N_ROI), 0.0)  # np.nan)
     bid_mix = np.full((len(scl), N_COST, N_ROI, len(scl)), 0.0)  # np.nan)
     cost_mix = np.full((len(scl), N_COST, N_ROI, len(scl)), 0.0)  # np.nan)
-    # cost_mix = [[[0.] for c in range(N_COST)] for i in range(len(scl))]
-    # bid_mix = [[[0.] for c in range(N_COST)] for i in range(len(scl))]
-    # rev_mix = [[[0.] for c in range(N_COST)] for i in range(len(scl))]
 
     if logger.isEnabledFor(logging.DEBUG): 
         logger.debug(f'scl shape: {scl.shape}')
@@ -607,10 +604,6 @@ def safe_optimize_rev(scl):
         rev_mix[0, :, k] = lb_rev
         cost_mix[0, :, k, shuffle_idx[0]] = ub_cost
         bid_mix[0, :, k, shuffle_idx[0]] = bid
-    # print('r', r[0])
-    # print('r-reshape', r[0].reshape((3, -1)))
-    # print('r-rereshape', r[0].T)
-    # print('c_a*r_a', cost_array[j::-1]*roi_array.reshape((-1,1)))
 
     if logger.isEnabledFor(logging.INFO):
         logger.info(f'the first row of the optimization matrix:\n{r[0]}')
@@ -638,47 +631,15 @@ def safe_optimize_rev(scl):
                 logger.debug(f'the current column/cost: {j}')
 
             for k, roi in enumerate(roi_array):
-                #mask = (~np.isnan(lb_rev/ub_cost)) & (ub_cost <= c) & (>= roi)
-                #print('mask', mask)
-                #print('ub_rev', ub_rev)
-                #s = np.where(mask, ub_rev, np.nan)  # lb_rev[s])
-                #print('s', s)
-                #mix = (lb_rev[:j+1] + cost_mix[i-1, j::-1]*roi_array.reshape((-1,1))) / c
                 mix = (lb_rev[:j+1] + rev_mix[i-1, j::-1, :].T) / c
-                #mix = (lb_rev[:j+1] + cost_array[j::-1]*roi_array.reshape((-1,1))) / c
-                # print('mixshape', mix.shape)
+
                 mask = (~np.isnan(mix)) & (~np.isnan(r[i-1,j::-1,:].T)) & (mix>=roi) # & (~np.isnan(r[i-1,j::-1,:].T)) 
-                # print('maskshape', mask.shape)
-                # print('rshape', r[i-1, j::-1, :].T.shape)
-                # print('sumshape', np.array(ub_rev[:j+1] + r[i-1, j::-1, :].T).shape)
-                # print('mix', mix)
-                # print('mask', mask)
-                # print('lbrev', lb_rev[:j+1])
-                # print('lbrevplusc_a*r_a', lb_rev[:j+1] + cost_array[j::-1]*roi_array.reshape((-1,1)))
-                # print('c_a*r_a', cost_array[j::-1]*roi_array.reshape((-1,1)))
-                # print('rprevious', r[i-1, j::-1, :].T)
-                # print('rpreviouszero', r[i-1, j::-1, 0])
-                # print('rpreviouszeroreshape', r[i-1, j::-1, 0].reshape((1,-1)))
 
                 #s = np.where(mask, ub_rev[:j+1] + r[i-1, j::-1, :].reshape((3,-1)), np.nan)  # lb_rev[s])
                 s = np.where(mask, ub_rev[:j+1] + r[i-1, j::-1, :].T, np.nan)  # lb_rev[s])
                 try:
                     a = np.unravel_index(np.nanargmax(s, axis=None), s.shape)
                 except ValueError:  # no feasible value
-                    # #print('thie')
-                    # bid_mix[i,j,k] = np.full((len(scl)),np.nan)  # for x in range(0+1)]  # np.nan  # bid[a]
-                    # cost_mix[i,j,k] = np.full((len(scl)),np.nan)  # for x in range(0+1)]  # np.nan  # bid[a]
-                    # #bid_mix[i, j, k] = np.nan  # bid[a]
-                    # rev_mix[i, j, k] = np.nan  # lb_rev[a]
-                    # #cost_mix[i, j, k] = np.nan  # ub_cost[a]
-                    # r[i, j, k] = np.nan  #  ub_rev[a]
-
-                    # if logger.isEnabledFor(logging.WARNING):
-                    #         logger.warning(f'no feasible value found, set r[0][{j}][{k}] to '
-                    #                     f'{r[0][j][k]})')
-                    #         logger.warning(f'no feasible value found, set bid_mix[0][{j}][{k}] to '
-                    #                     f'{bid_mix[0][j][k]})')
-                    # continue
 
                     for x, _ in enumerate(roi_array[k:]):
                         bid_mix[i,j,k+x] = np.full((len(scl)),np.nan)  # for x in range(0+1)]  # np.nan  # bid[a]
@@ -694,30 +655,15 @@ def safe_optimize_rev(scl):
                                             f'{bid_mix[0][j][k]})')
                     break
 
-                #print('k', k)
-                # print('j', j)
-                # bid_mix[i][j][k] = bid[a[0]]
-                # rev_mix[i][j][k] = lb_rev[a[0]]
-                # cost_mix[i][j][k] = ub_cost[a[0]]
-                # r[i][j][k] = ub_rev[a[0]]
-                # print('s', s)
-                # print('a', a)
-                # print('a[0]', a[0])
                 bid_mix[i,j,k,shuffle_idx[i]] = bid[a[1]]
                 bid_mix[i,j,k] += bid_mix[i-1][j-a[1]][a[0]]
                 cost_mix[i,j,k,shuffle_idx[i]] = ub_cost[a[1]]
                 cost_mix[i,j,k] += cost_mix[i-1][j-a[1]][a[0]]
                 
 
-                #bid_mix[i, j, k] = bid_mix[i-1][j-a[1]][a[0]] + [bid[a[1]]]
-                #rev_mix[i, j, k] = rev_mix[i-1][j-a[0]][l] + [lb_rev[a]] #lb_rev[a]
                 rev_mix[i, j, k] = rev_mix[i-1][j-a[1]][a[0]] + lb_rev[a[1]] #lb_rev[a]
-                #cost_mix[i, j, k] = cost_mix[i-1][j-a[1]][a[0]] + [ub_cost[a[1]]]
-                #r[i, j, k] = r[i-1, j-a[1], a[0]] + ub_rev[a[1]]
-                #r[i, j, k] = r[i-1, j::-1, :].T[a] + ub_rev[a[1]]
                 r[i, j, k] = (ub_rev[:j+1]+r[i-1, j::-1, :].T)[a] #+ ub_rev[a[1]]
 
-                # print('rijk', r[i, j, k])
                 if r[i,j,k] / c < roi:
                     print('something unexpected happened', r[i,j,k] / c )
                     return
@@ -738,17 +684,6 @@ def safe_optimize_roi_2(scl):
     bid_mix = np.full((len(scl), N_COST, N_ROI, len(scl)), 0.0)  # np.nan)
     cost_mix = np.full((len(scl), N_COST, N_ROI, len(scl)), 0.0)  # np.nan)
     rev_mix = np.full((len(scl), N_COST, N_ROI), 0.0)  # np.nan)
-    #cost_mix = np.full((len(scl), N_COST, N_ROI), 0.0)  # np.nan)
-    #cost_mix = [[[0.] for i in range(len(scl)) for c in range(N_COST) for k in range(N_ROI)] ]
-    #bid_mix = [[[0.] for i in range(len(scl)) for c in range(N_COST) for k in range(N_ROI)]
-    # cost_mix = [[[0.] for c in range(N_COST)] for i in range(len(scl))]
-    #bid_mix = [[[[0.] for k in range(N_ROI)] for c in range(N_COST)] for i in range(len(scl))]
-    #bid_mix = [[ [[0.] for i in range(N_ROI)] for c in range(N_COST)] for k in range(len(scl))]
-    #cost_mix = [[ [[0.] for i in range(N_ROI)] for c in range(N_COST)] for k in range(len(scl))]
-    # rev_mix = [[[0.] for c in range(N_COST)] for i in range(len(scl))]
-    # print(bid_mix[0][0][:])
-    # print(bid_mix[-1])
-    # return
 
     if logger.isEnabledFor(logging.DEBUG): 
         logger.debug(f'scl shape: {scl.shape}')
@@ -765,11 +700,6 @@ def safe_optimize_roi_2(scl):
     ub_cost = scl[0, :, 2]
     ub_rev = scl[0, :, 3]
     lb_cost = scl[0, :, 4]
-    # print('ub_cost', ub_cost)
-    # print('lb_rev', lb_rev)
-    # print('ub_rev', ub_rev)
-    # print('bid', bid)
-    # return
 
     for j, c in enumerate(cost_array):
         if c == 0. and bid[0] == 0.:
@@ -841,28 +771,11 @@ def safe_optimize_roi_2(scl):
                 logger.debug(f'the current column/cost: {j}')
 
             for k, roi in enumerate(roi_array):
-                #mask = (~np.isnan(lb_rev/ub_cost)) & (ub_cost <= c) & (>= roi)
-                #print('mask', mask)
-                #print('ub_rev', ub_rev)
-                #s = np.where(mask, ub_rev, np.nan)  # lb_rev[s])
-                #print('s', s)
-                #mix = (lb_rev[:j+1] + cost_mix[i-1, j::-1]*roi_array.reshape((-1,1))) / c
+
                 mix = (lb_rev[:j+1] + cost_array[j::-1]*roi_array.reshape((-1,1))) / c
                 # print('mixshape', mix.shape)
                 mask = (~np.isnan(mix)) & (~np.isnan(r[i-1,j::-1,:].T)) & (mix>=roi) # & (~np.isnan(r[i-1,j::-1,:].T)) 
-                # print('maskshape', mask.shape)
-                # print('rshape', r[i-1, j::-1, :].T.shape)
-                # print('sumshape', np.array(ub_rev[:j+1] + r[i-1, j::-1, :].T).shape)
-                # print('mix', mix)
-                # print('mask', mask)
-                # print('lbrev', lb_rev[:j+1])
-                # print('lbrevplusc_a*r_a', lb_rev[:j+1] + cost_array[j::-1]*roi_array.reshape((-1,1)))
-                # print('c_a*r_a', cost_array[j::-1]*roi_array.reshape((-1,1)))
-                # print('rprevious', r[i-1, j::-1, :].T)
-                # print('rpreviouszero', r[i-1, j::-1, 0])
-                # print('rpreviouszeroreshape', r[i-1, j::-1, 0].reshape((1,-1)))
 
-                #s = np.where(mask, ub_rev[:j+1] + r[i-1, j::-1, :].reshape((3,-1)), np.nan)  # lb_rev[s])
                 s = np.where(mask, ub_rev[:j+1] + r[i-1, j::-1, :].T, np.nan)  # lb_rev[s])
                 try:
                     a = np.unravel_index(np.nanargmax(s, axis=None), s.shape)
@@ -883,35 +796,14 @@ def safe_optimize_roi_2(scl):
                                         f'{bid_mix[0][j][k]})')
                     continue
 
-                #print('k', k)
-                # print('j', j)
-                # bid_mix[i][j][k] = bid[a[0]]
-                # rev_mix[i][j][k] = lb_rev[a[0]]
-                # cost_mix[i][j][k] = ub_cost[a[0]]
-                # r[i][j][k] = ub_rev[a[0]]
-                # print('s', s)
-                # print('a', a)
-                # print('a[0]', a[0])
-                
-            #bid_mix[i][j] = bid_mix[i - 1][j-opt_idx] + [cbr[opt_idx, 0]]
-                # print('bida1', bid[a[1]])
-                # print('bid_mix', bid_mix[i-1][j-a[1]][a[0]])
-                # print('bidmixnew', bid_mix[i-1][j-a[1]][a[0]] + [bid[a[1]]])
-                # return
-
                 bid_mix[i,j,k,i] = bid[a[1]]
                 bid_mix[i,j,k] += bid_mix[i-1][j-a[1]][a[0]]
                 cost_mix[i,j,k,i] = ub_cost[a[1]]
                 cost_mix[i,j,k] += cost_mix[i-1][j-a[1]][a[0]]
-                #bid_mix[i][j][k] = (bid_mix[i-1][j::-1, :].T)[a] + [bid[a[1]]]
-                #rev_mix[i, j, k] = rev_mix[i-1][j-a[0]][l] + [lb_rev[a]] #lb_rev[a]
+
                 rev_mix[i, j, k] = rev_mix[i-1][j-a[1]][a[0]] + lb_rev[a[1]] #lb_rev[a]
-                #cost_mix[i][j][k] = cost_mix[i-1][j-a[1]][a[0]] + [ub_cost[a[1]]]
-                #r[i, j, k] = r[i-1, j-a[1], a[0]] + ub_rev[a[1]]
-                #r[i, j, k] = r[i-1, j::-1, :].T[a] + ub_rev[a[1]]
                 r[i, j, k] = (ub_rev[:j+1]+r[i-1, j::-1, :].T)[a] #+ ub_rev[a[1]]
 
-                # print('rijk', r[i, j, k])
                 if r[i,j,k] / c < roi:
                     print('something unexpected happened', r[i,j,k] / c )
                     return
@@ -931,17 +823,6 @@ def safe_optimize_delta(scl):
     cost_mix = np.full((len(scl), N_COST, N_ROI, len(scl)), 0.0)  # np.nan)
     rev_mix = np.full((len(scl), N_COST, N_ROI), 0.0)  # np.nan)
     delta_rev_mix = np.full((len(scl), N_COST, N_ROI), 0.0)  # np.nan)
-    #cost_mix = np.full((len(scl), N_COST, N_ROI), 0.0)  # np.nan)
-    #cost_mix = [[[0.] for i in range(len(scl)) for c in range(N_COST) for k in range(N_ROI)] ]
-    #bid_mix = [[[0.] for i in range(len(scl)) for c in range(N_COST) for k in range(N_ROI)]
-    # cost_mix = [[[0.] for c in range(N_COST)] for i in range(len(scl))]
-    #bid_mix = [[[[0.] for k in range(N_ROI)] for c in range(N_COST)] for i in range(len(scl))]
-    #bid_mix = [[ [[0.] for i in range(N_ROI)] for c in range(N_COST)] for k in range(len(scl))]
-    #cost_mix = [[ [[0.] for i in range(N_ROI)] for c in range(N_COST)] for k in range(len(scl))]
-    # rev_mix = [[[0.] for c in range(N_COST)] for i in range(len(scl))]
-    # print(bid_mix[0][0][:])
-    # print(bid_mix[-1])
-    # return
 
     if logger.isEnabledFor(logging.DEBUG): 
         logger.debug(f'scl shape: {scl.shape}')
@@ -996,11 +877,6 @@ def safe_optimize_delta(scl):
                                     f'{bid_mix[0][j][k]})')
                 continue
 
-            #print('k', k)
-            # print('j', j)
-    # bid_mix[0] = [[x] for x in scl[0, :, 0]]
-    # cost_mix[0] = [[x] for x in scl[0, :, 2]]
-            #bid_mix[0][j][k] = [bid[a]]
             bid_mix[0,j,k,shuffle_idx[0]] = bid[a]
             cost_mix[0,j,k,shuffle_idx[0]] = ub_cost[a]
             rev_mix[0][j][k] = lb_rev[a]
@@ -1037,46 +913,15 @@ def safe_optimize_delta(scl):
                 logger.debug(f'the current column/cost: {j}')
 
             for k, roi in enumerate(roi_array):
-                #mask = (~np.isnan(lb_rev/ub_cost)) & (ub_cost <= c) & (>= roi)
-                #print('mask', mask)
-                #print('ub_rev', ub_rev)
-                #s = np.where(mask, ub_rev, np.nan)  # lb_rev[s])
-                #print('s', s)
-                #mix = (lb_rev[:j+1] + cost_mix[i-1, j::-1]*roi_array.reshape((-1,1))) / c
+
                 mix = (lb_rev[:j+1] + cost_array[j::-1]*roi_array.reshape((-1,1))) / c
                 # print('mixshape', mix.shape)
                 mask = (~np.isnan(mix)) & (~np.isnan(r[i-1,j::-1,:].T)) & (mix>=roi) # & (~np.isnan(r[i-1,j::-1,:].T)) 
-                # print('maskshape', mask.shape)
-                # print('rshape', r[i-1, j::-1, :].T.shape)
-                # print('sumshape', np.array(ub_rev[:j+1] + r[i-1, j::-1, :].T).shape)
-                # print('mix', mix)
-                # print('mask', mask)
-                # print('lbrev', lb_rev[:j+1])
-                # print('lbrevplusc_a*r_a', lb_rev[:j+1] + cost_array[j::-1]*roi_array.reshape((-1,1)))
-                # print('c_a*r_a', cost_array[j::-1]*roi_array.reshape((-1,1)))
-                # print('rprevious', r[i-1, j::-1, :].T)
-                # print('rpreviouszero', r[i-1, j::-1, 0])
-                # print('rpreviouszeroreshape', r[i-1, j::-1, 0].reshape((1,-1)))
 
-                #s = np.where(mask, ub_rev[:j+1] + r[i-1, j::-1, :].reshape((3,-1)), np.nan)  # lb_rev[s])
                 s = np.where(mask, ub_rev[:j+1] + delta_rev_mix[i-1, j::-1, :].T - lb_rev[:j+1], np.nan)  # lb_rev[s])
                 try:
                     a = np.unravel_index(np.nanargmax(s, axis=None), s.shape)
                 except ValueError:  # no feasible value
-
-                    # bid_mix[i,j,k] = np.full((len(scl)),np.nan)  # for x in range(0+1)]  # np.nan  # bid[a]
-                    # cost_mix[i,j,k] = np.full((len(scl)),np.nan)  # for x in range(0+1)]  # np.nan  # bid[a]
-                    # rev_mix[i, j, k] = np.nan  # lb_rev[a]
-                    # #cost_mix[i][j][k] = [np.nan for x in range(i+1)]  # np.nan  # ub_cost[a]
-                    # r[i, j, k] = np.nan  #  ub_rev[a]
-                    # delta_rev_mix[i, j, k] = np.nan
-
-                    # if logger.isEnabledFor(logging.WARNING):
-                    #         logger.warning(f'no feasible value found, set r[0][{j}][{k}] to '
-                    #                     f'{r[0][j][k]})')
-                    #         logger.warning(f'no feasible value found, set bid_mix[0][{j}][{k}] to '
-                    #                     f'{bid_mix[0][j][k]})')
-                    # continue
 
                     for x, _ in enumerate(roi_array[k:]):
                         bid_mix[i,j,k+x] = np.full((len(scl)),np.nan)  # for x in range(0+1)]  # np.nan  # bid[a]
@@ -1092,32 +937,12 @@ def safe_optimize_delta(scl):
                                             f'{bid_mix[0][j][k]})')
                     break
 
-                #print('k', k)
-                # print('j', j)
-                # bid_mix[i][j][k] = bid[a[0]]
-                # rev_mix[i][j][k] = lb_rev[a[0]]
-                # cost_mix[i][j][k] = ub_cost[a[0]]
-                # r[i][j][k] = ub_rev[a[0]]
-                # print('s', s)
-                # print('a', a)
-                # print('a[0]', a[0])
-                
-            #bid_mix[i][j] = bid_mix[i - 1][j-opt_idx] + [cbr[opt_idx, 0]]
-                # print('bida1', bid[a[1]])
-                # print('bid_mix', bid_mix[i-1][j-a[1]][a[0]])
-                # print('bidmixnew', bid_mix[i-1][j-a[1]][a[0]] + [bid[a[1]]])
-                # return
-
                 bid_mix[i,j,k,shuffle_idx[i]] = bid[a[1]]
                 bid_mix[i,j,k] += bid_mix[i-1][j-a[1]][a[0]]
                 cost_mix[i,j,k,shuffle_idx[i]] = ub_cost[a[1]]
                 cost_mix[i,j,k] += cost_mix[i-1][j-a[1]][a[0]]
-                #bid_mix[i][j][k] = (bid_mix[i-1][j::-1, :].T)[a] + [bid[a[1]]]
-                #rev_mix[i, j, k] = rev_mix[i-1][j-a[0]][l] + [lb_rev[a]] #lb_rev[a]
+
                 rev_mix[i, j, k] = rev_mix[i-1][j-a[1]][a[0]] + lb_rev[a[1]] #lb_rev[a]
-                #cost_mix[i][j][k] = cost_mix[i-1][j-a[1]][a[0]] + [ub_cost[a[1]]]
-                #r[i, j, k] = r[i-1, j-a[1], a[0]] + ub_rev[a[1]]
-                #r[i, j, k] = r[i-1, j::-1, :].T[a] + ub_rev[a[1]]
                 r[i, j, k] = (ub_rev[:j+1]+r[i-1, j::-1, :].T)[a] #+ ub_rev[a[1]]
                 delta_rev_mix[i, j, k] = (ub_rev[:j+1]+delta_rev_mix[i-1, j::-1, :].T)[a] - lb_rev[a[1]]#+ ub_rev[a[1]]
 
@@ -1268,9 +1093,6 @@ def safe_optimize(scl):  #, LOG=False):  # , min_bid=0.0):
     bid_mix = np.full((len(scl), N_COST, N_ROI), 0.0)  # np.nan)
     rev_mix = np.full((len(scl), N_COST, N_ROI), 0.0)  # np.nan)
     cost_mix = np.full((len(scl), N_COST, N_ROI), 0.0)  # np.nan)
-    # cost_mix = [[[0.] for c in range(N_COST)] for i in range(len(scl))]
-    # bid_mix = [[[0.] for c in range(N_COST)] for i in range(len(scl))]
-    # rev_mix = [[[0.] for c in range(N_COST)] for i in range(len(scl))]
 
     if logger.isEnabledFor(logging.DEBUG): 
         logger.debug(f'scl shape: {scl.shape}')
@@ -1323,14 +1145,6 @@ def safe_optimize(scl):  #, LOG=False):  # , min_bid=0.0):
             cost_mix[0][j][k] = ub_cost[a]
             r[0][j][k] = ub_rev[a]
 
-    # r[0] = scl[0, :, 1]
-
-    # bid_mix[0] = [[x] for x in scl[0, :, 0]]
-    # cost_mix[0] = [[x] for x in scl[0, :, 2]]
-    # rev_mix[0] = [[x] for x in scl[0, :, 1]]
-    #print('rev_mix_0', rev_mix[0])
-    #print('r_0', r[0,:,0])
-
     if logger.isEnabledFor(logging.INFO):
         logger.info(f'the first row of the optimization matrix:\n{r[0]}')
         logger.info(f'the first row of the bid_mix:\n{bid_mix[0]}')
@@ -1356,12 +1170,7 @@ def safe_optimize(scl):  #, LOG=False):  # , min_bid=0.0):
                 continue
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(f'the current column/cost: {j}')
-                # logger.debug(f'current bids:\n{cbr[:j+1, 0]}')
-                # logger.debug(f'current revenues:\n{cbr[:j+1, 1]}')
-                # logger.debug(f'current costs:\n{cbr[:j+1, 2]}')
-                # logger.debug(f'the previous row of the resulting matrix'
-                #             f'- until the current cost/column {j} - reversed:\n'
-                #             f'{r[i-1, j::-1]}')
+
             a = -1 
             # for k, roi in enumerate(roi_array):
             k = 0
@@ -1414,11 +1223,6 @@ def safe_optimize(scl):  #, LOG=False):  # , min_bid=0.0):
                 k+=1
                 for z, roi in enumerate(roi_array[k:]):
                     if mix[a] >= roi:
-                        # print('z+k', z+k)
-                        # print('z', z)
-                        # print('k', k)
-                        # print('mix[a]:', mix[a])
-                        # print('roi', roi)
                         bid_mix[i, j, k+z] = bid_mix[i-1][j-a][l] + [bid[a]]
                         #rev_mix[i, j, k] = rev_mix[i-1][j-a][l] + [lb_rev[a]] #lb_rev[a]
                         rev_mix[i, j, k+z] = rev_mix[i-1][j-a][l] + lb_rev[a] #lb_rev[a]
@@ -1466,16 +1270,11 @@ def safe_opt(scl):
     cost_array = np.linspace(0., MAX_EXP, N_COST)
 
     bid = scl[shuffle_idx[0], :, :, 0]
-    #lb_rev = scl[shuffle_idx[0], :, 1]
-    #ub_cost = scl[shuffle_idx[0], :, 2]
     ub_rev = scl[shuffle_idx[0], :, :, 1]
-    #lb_cost = scl[shuffle_idx[0], :, 4]
 
     bid_mix[0,:,:,shuffle_idx[0]] = bid
     r[0,:,:] = ub_rev
     cost_mix[0,:,:, shuffle_idx[0]] = np.where(~np.isnan(bid), cost_array, np.nan)
-    #print('cost_mix')
-    #return
 
     if logger.isEnabledFor(logging.INFO):
         logger.info(f'the first row of the optimization matrix:\n{r[0]}')
@@ -1484,10 +1283,7 @@ def safe_opt(scl):
 
     for i in range(1, len(scl)):
         bid = scl[shuffle_idx[i], :, :, 0]
-        #lb_rev = scl[shuffle_idx[i], :, 1]
-        #ub_cost = scl[shuffle_idx[i], :, 2]
         ub_rev = scl[shuffle_idx[i], :, :, 1]
-        #lb_cost = scl[shuffle_idx[i], :, 4]
 
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f'the bids that maximize the revenues'
@@ -1497,9 +1293,6 @@ def safe_opt(scl):
         for j, rev in enumerate(rev_array):  # np.linspace(0., MAX_EXP, N_COST)):
 
             for k, c in enumerate(cost_array):
-                # if (c == 0.) and (bid[j, k] == 0.) and (r[i-1][j][k] <= 0.):
-                #     continue
-
                 if logger.isEnabledFor(logging.DEBUG):
                     logger.debug(f'the current column/cost: {j}')
 
@@ -1538,8 +1331,7 @@ def safe_opt(scl):
                     bid_mix[i,j,k] += bid_mix[i-1, j-a[0], k-a[1]]
                     cost_mix[i,j,k,shuffle_idx[i]] = cost_array[a[1]]  # ub_cost[a[1]]
                     cost_mix[i,j,k] += cost_mix[i-1, j-a[0], k - a[1]]
-                    # rev_mix[i, j, k] = rev_mix[i-1][j-a[1]][a[0]] + lb_rev[a[1]] #lb_rev[a]
-                    #r[i, j, k] = ub_rev[a] + r[i-1, j-a[0], k-a[1]]  # (ub_rev[:j+1]+r[i-1, j::-1, :].T)[a] #+ ub_rev[a[1]]
+
                     r[i, j, k] = mix[a]  # (ub_rev[a] + r[i-1, j-a[0], k-a[1]]  # (ub_rev[:j+1]+r[i-1, j::-1, :].T)[a] #+ ub_rev[a[1]]
                     continue
 

@@ -166,30 +166,6 @@ class Agent:
                            f'while r was:\n{r}\n'
                            f'and roi was:\n{roi}\n'
                            f'chosen cost_mix:\n{cost_mix[idx]}\n')
-            # idx = np.nanargmax(roi)
-            # logger.warning(f'no ROI greater than:{MIN_ROI}\n'
-            #                f'choose the bid:\n{bid_mix[idx]}\n'
-            #                f'for {type(self).__name__}\n'
-            #                f'that maximize the roi\n'  #revenue\n'
-            #                f'{r[idx]}\n'
-            #                f'while the roi\n'
-            #                f'{roi[idx]}\n'
-            #                f'the possible revenues were:\n{r[mask]}'
-            #                f'while r was:\n{r}'
-            #                f'and roi was:\n{roi}')
-            # logger.warning(f'r:\n{r}')
-            #logger.warning(f'chosen bid_mix:\n{bid_mix[idx]}')
-            #if logger.isEnabledFor(logging.WARNING):
-            #    logger.warning(f'chosen cost_mix:\n{cost_mix[idx]}')
-
-            # rts_roi = 0
-            # rts_rev = 0  # true_revenue_campaign[idx_true_max_roi_campaign+1]
-            
-            # r = np.where(np.isnan(r), 0., r)
-            # roi = r/cost_array
-
-            # return (bid_mix[-1] if not ret_roi_revenue_cost
-            #         else (bid_mix[-1], roi[-1], rev_mix[-1], cost_mix[-1]))
             return (bid_mix[idx] if not ret_roi_revenue_cost
                     else (bid_mix, r, roi, rev_mix, cost_mix, idx))
 
@@ -209,21 +185,8 @@ class Agent:
                          f'the associated roi value:\n{roi[idx]}\n'
                          f'the chosen bid mix:\n{bid_mix[idx]}\n'
                          f'the chosen cost mix:\n{cost_mix[idx]}\n')
-
-        # r = np.where(np.isnan(r), 0., r)
-        # roi = r/cost_array
-        # return (bid_mix[idx] if not ret_roi_revenue_cost
-        #         else (bid_mix[idx], roi[idx], rev_mix[idx], cost_mix[idx]))
         return (bid_mix[idx] if not ret_roi_revenue_cost
                 else (bid_mix, r, roi, rev_mix, cost_mix, idx))
-        # rts_roi = roi_rts[idx_roi_max_rev]
-        # rev_ts = rts[-1][idx_roi_max_rev]
-
-        # print('rev_ts', rev_ts)
-        # print('rts roi', rts_roi)
-
-        # X = np.append(X, np.array(
-        #     bid_mix_ts[-1][idx_roi_max_rev]).reshape(-1, 1), axis=1)
 
     def update(self, X_bid, Y_cost, Y_rev):
         logging.info('entering update')
@@ -255,6 +218,7 @@ class TS_Agent(Agent):
                for s in self.subcampaigns]
         scl = np.array(scl)
         return optimize(scl)
+
 
 class TS_Conservative_Agent(Agent):
     def __init__(self, subcampaigns_number, hps=None, delta_bid=3.):
